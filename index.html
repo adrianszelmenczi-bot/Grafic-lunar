@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#0d1117"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Grafic de Lucru"/>
+  <title>Grafic de Lucru</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" href="icons/icon-192.png"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#0d1117;--surface:#161b27;--surface2:#1c2333;--border:#262d3f;
+      --accent:#f0a500;--accent2:#ff6b35;--text:#dde1ee;--muted:#5a6380;
+      --green:#3dd68c;--red:#e05c5c;--blue:#5b9cf6;--purple:#a78bfa;
+      --mono:'DM Mono',monospace;--disp:'Syne',sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100dvh;
+      padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+    body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.4;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");}
+    .app{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:20px 14px 60px}
+
+    header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+    .logo-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+    .logo-title{font-family:var(--disp);font-size:26px;font-weight:800;line-height:1}
+    .logo-title span{color:var(--accent)}
+    .month-badge{text-align:right}
+    .month-name{font-family:var(--disp);font-size:20px;font-weight:700;color:var(--accent);text-transform:capitalize}
+    .month-year{font-size:11px;color:var(--muted);letter-spacing:.12em}
+
+    .month-nav{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:14px}
+    .month-nav button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 10px;border-radius:6px;transition:color .2s,background .2s}
+    .month-nav button:hover{color:var(--accent);background:rgba(240,165,0,.1)}
+    .nav-label{font-size:13px;color:var(--text);font-family:var(--disp);font-weight:700;text-transform:capitalize}
+
+    .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+    .sval-label{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+    .sval-num{font-family:var(--disp);font-size:17px;font-weight:700}
+    .sval-num.accent{color:var(--accent)}.sval-num.green{color:var(--green)}.sval-num.red{color:var(--red)}.sval-num.blue{color:var(--blue)}
+    .prog-bg{height:5px;background:var(--border);border-radius:5px;overflow:hidden}
+    .prog-fill{height:100%;border-radius:5px;transition:width .6s cubic-bezier(.34,1.56,.64,1);background:linear-gradient(90deg,var(--accent),var(--accent2))}
+    .prog-fill.done{background:linear-gradient(90deg,#3dd68c,#2cb87a)}
+    .prog-labels{display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--muted)}
+
+    .days-list{display:flex;flex-direction:column;gap:5px}
+
+    .day-row{border-radius:12px;overflow:hidden;border:1px solid var(--border);transition:border-color .2s}
+    .day-row.has-data{border-color:rgba(240,165,0,.25)}
+    .day-row.weekend{opacity:.4;border-color:transparent}
+    .day-row.holiday{border-color:rgba(91,156,246,.2)}
+
+    .day-top{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);cursor:pointer;user-select:none;-webkit-user-select:none}
+    .day-top.weekend{cursor:default;background:rgba(255,255,255,.015)}
+    .day-top.holiday-top{background:rgba(91,156,246,.05)}
+
+    .day-date{display:flex;flex-direction:column;align-items:center;min-width:32px}
+    .day-num{font-family:var(--disp);font-size:16px;font-weight:700;line-height:1}
+    .day-dow{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+    .day-dow.wday{color:var(--blue);opacity:.7}
+
+    .day-mid{flex:1;min-width:0}
+    .day-status{font-size:10px;color:var(--muted);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .day-prog-bg{height:3px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:5px}
+    .day-prog-fill{height:100%;border-radius:3px;transition:width .4s ease;background:var(--accent)}
+    .day-prog-fill.done{background:var(--green)}
+
+    .day-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:72px}
+    .day-worked{font-size:13px;font-weight:500;color:var(--accent)}
+    .day-worked.done{color:var(--green)}.day-worked.muted{color:var(--muted);font-size:11px}
+    .day-norm-hint{font-size:10px;color:var(--muted)}
+
+    .day-inputs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-top:1px solid var(--border)}
+    .day-inputs.hidden{display:none}
+    .inp-group{background:var(--surface2);padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px}
+    .inp-label{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+    .time-spin{display:flex;align-items:center;gap:6px}
+    .spin-unit{display:flex;flex-direction:column;align-items:center;gap:0}
+    .spin-btn{
+      background:var(--surface);border:1px solid var(--border);color:var(--text);
+      width:44px;height:36px;border-radius:8px;cursor:pointer;
+      font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;
+      user-select:none;-webkit-user-select:none;transition:background .15s,border-color .15s;
+      -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+    }
+    .spin-btn:active{background:var(--border);border-color:var(--accent)}
+    .spin-val{
+      font-family:var(--mono);font-size:20px;font-weight:500;color:var(--text);
+      width:44px;height:36px;text-align:center;line-height:36px;
+      background:var(--surface);border:1px solid var(--border);border-radius:6px;
+      cursor:default;
+    }
+    .spin-val.ph{color:var(--muted)}
+    .time-sep{color:var(--accent);font-size:20px;font-weight:bold;line-height:1;padding-top:2px}
+    .inp-actions{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:6px 14px 10px;background:var(--surface2)}
+    .btn-clear-day{background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:.08em;transition:color .2s}
+    .btn-clear-day:hover{color:var(--red)}
+    .btn-hol{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer;padding:4px 10px;border-radius:6px;letter-spacing:.06em;transition:all .2s}
+    .btn-hol:hover{border-color:var(--blue);color:var(--blue)}
+    .btn-hol.on{border-color:var(--blue);color:var(--blue);background:rgba(91,156,246,.1)}
+
+    .btn-reset{width:100%;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:11px;border-radius:10px;cursor:pointer;transition:all .2s;margin-top:10px}
+    .btn-reset:hover{border-color:var(--red);color:var(--red);background:rgba(224,92,92,.05)}
+
+    #install-banner{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--accent);border-radius:14px;padding:14px 16px;align-items:center;gap:12px;max-width:480px;width:calc(100% - 28px);z-index:100;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+    .install-text{flex:1;font-size:12px;line-height:1.5}
+    .install-text strong{color:var(--accent);display:block;margin-bottom:2px;font-size:13px}
+    .install-btns{display:flex;flex-direction:column;gap:6px}
+    .btn-install{background:var(--accent);color:#000;border:none;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.1em;padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+    .btn-dismiss{background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer;text-align:center}
+
+
+    /* ── Week header ── */
+    .week-header{
+      display:grid;grid-template-columns:1fr 1fr 1fr;
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:10px;padding:10px 14px;margin:14px 0 6px;
+      gap:8px;
+    }
+    .week-header-title{
+      grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);
+    }
+    .week-label-txt{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+    .week-range-txt{font-size:10px;color:var(--muted)}
+    .wk-val{display:flex;flex-direction:column;gap:2px}
+    .wk-val span:first-child{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .wk-val span:last-child{font-family:var(--disp);font-size:15px;font-weight:700}
+    .wk-val span.accent{color:var(--accent)}
+    .wk-val span.blue{color:var(--blue)}
+    .wk-val span.green{color:var(--green)}
+    .wk-val span.red{color:var(--red)}
+    .wk-prog-wrap{grid-column:1/-1;margin-top:4px}
+    .wk-prog-bg{height:3px;background:var(--border);border-radius:3px;overflow:hidden}
+    .wk-prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s ease}
+    .wk-prog-fill.done{background:linear-gradient(90deg,var(--green),#2cb87a)}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .summary-card{animation:fadeUp .3s ease both}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo-label">tracker lunar</div>
+      <div class="logo-title">Grafic de <span>Lucru</span></div>
+    </div>
+    <div class="month-badge">
+      <div class="month-name" id="hdrMonth"></div>
+      <div class="month-year" id="hdrYear"></div>
+    </div>
+  </header>
+
+  <div class="month-nav">
+    <button id="prevMonth">&#8592;</button>
+    <span class="nav-label" id="navLabel"></span>
+    <button id="nextMonth">&#8594;</button>
+  </div>
+
+  <div class="summary-card" id="summaryCard"></div>
+  <div class="days-list" id="daysList"></div>
+  <button class="btn-reset" id="btnReset">⟳ Resetează luna</button>
+</div>
+
+<div id="install-banner">
+  <div class="install-text"><strong>Instalează aplicația</strong>Adaugă Grafic de Lucru pe ecranul principal.</div>
+  <div class="install-btns">
+    <button class="btn-install" id="btnInstall">Instalează</button>
+    <button class="btn-dismiss" id="btnDismiss">Nu acum</button>
+  </div>
+</div>
+
+<script>
+// ── Data ────────────────────────────────────────────────────
+const NORM    = {1:510,2:510,3:510,4:510,5:360}; // Mon-Fri in minutes (8h30/6h)
+
+// Builds a map {dayKey: normMinutes} for a month.
+// Last working Friday gets whatever is needed to reach wdays×480.
+function buildDayNorms(y, m, holidays) {
+  const dim = new Date(y,m+1,0).getDate();
+  const norms = {};
+  let lastFriKey = null, wdays = 0, sumWithout = 0;
+
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d), dw=dt.getDay()||7;
+    const k=dayKey(dt);
+    const dd_hols = holidays;
+    const isHol = dd_hols.has(mmdd(dt));
+    const isWkend = dw>=6;
+    // Note: custom holidays from data are handled separately — here we use base holidays
+    if(!isWkend && !isHol){
+      wdays++;
+      if(dw===5) lastFriKey=k; // track last Friday
+    }
+  }
+
+  const tNorm = wdays * 480;
+
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d), dw=dt.getDay()||7;
+    const k=dayKey(dt);
+    const isHol = holidays.has(mmdd(dt));
+    const isWkend = dw>=6;
+    if(!isWkend && !isHol && k!==lastFriKey){
+      sumWithout += NORM[dw]||0;
+    }
+  }
+
+  const lastFriNorm = lastFriKey ? Math.max(0, tNorm - sumWithout) : 0;
+
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d), dw=dt.getDay()||7;
+    const k=dayKey(dt);
+    const isHol = holidays.has(mmdd(dt));
+    const isWkend = dw>=6;
+    if(!isWkend && !isHol){
+      norms[k] = k===lastFriKey ? lastFriNorm : (NORM[dw]||0);
+    }
+  }
+  return {norms, lastFriKey, tNorm};
+}
+const DOW_RO  = ['','Lun','Mar','Mie','Joi','Vin','Sâm','Dum'];
+const MONTHS  = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
+
+function orthodoxEaster(year) {
+  const c = year%19, a = year%4, b = year%7;
+  const d = (19*c+15)%30, e = (2*a+4*b-d+34)%7;
+  const mo = Math.floor((d+e+114)/31), dy = (d+e+114)%31+1;
+  const jd = new Date(year,mo-1,dy);
+  jd.setDate(jd.getDate()+13); return jd;
+}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function mmdd(d){return String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function dayKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+
+function getHolidays(year) {
+  const fixed=['01-01','01-02','01-24','05-01','06-01','08-15','11-30','12-01','12-25','12-26'];
+  const e = orthodoxEaster(year);
+  const mobile=[addDays(e,-2),e,addDays(e,1),addDays(e,49),addDays(e,50)].map(mmdd);
+  return new Set([...fixed,...mobile]);
+}
+
+function toMins(t){if(!t)return null;const[h,m]=t.split(':').map(Number);return h*60+m;}
+function hm(m){
+  const a=Math.abs(m),h=Math.floor(a/60),mn=a%60;
+  return (m<0?'-':'')+h+'h '+String(mn).padStart(2,'0')+'min';
+}
+
+// ── State ───────────────────────────────────────────────────
+let Y=2026, M=2; // M=2 → March (0-indexed)
+
+function mKey(y,m){return `${y}-${String(m+1).padStart(2,'0')}`;}
+function load(y,m){try{return JSON.parse(localStorage.getItem(mKey(y,m)))||{};}catch{return {};}}
+function save(y,m,d){localStorage.setItem(mKey(y,m),JSON.stringify(d));}
+
+// ── getDayNorms: last Friday absorbs remainder to reach wdays×8h ─
+function getDayNorms(y,m,data,holidays) {
+  const dim=new Date(y,m+1,0).getDate();
+  let wdays=0,lastFriKey=null;
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d),dw=dt.getDay()||7;
+    const k=dayKey(dt),dd=data[k]||{};
+    const isHol=dd.holiday!==undefined?dd.holiday:holidays.has(mmdd(dt));
+    if(dw<6&&!isHol){wdays++;if(dw===5)lastFriKey=k;}
+  }
+  const tNorm=wdays*480;
+  let sumOther=0;
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d),dw=dt.getDay()||7;
+    const k=dayKey(dt),dd=data[k]||{};
+    const isHol=dd.holiday!==undefined?dd.holiday:holidays.has(mmdd(dt));
+    if(dw<6&&!isHol&&k!==lastFriKey) sumOther+=NORM[dw]||0;
+  }
+  const lastFriNorm=lastFriKey?Math.max(0,tNorm-sumOther):0;
+  const norms={};
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d),dw=dt.getDay()||7;
+    const k=dayKey(dt),dd=data[k]||{};
+    const isHol=dd.holiday!==undefined?dd.holiday:holidays.has(mmdd(dt));
+    if(dw<6&&!isHol) norms[k]=k===lastFriKey?lastFriNorm:(NORM[dw]||0);
+  }
+  return {norms,tNorm,wdays,lastFriKey,lastFriNorm};
+}
+
+// ── Compute month stats ─────────────────────────────────────
+function isVacation(dd,legalHolidays,mmddStr){
+  // custom-marked holiday that is NOT a legal holiday = concediu
+  return dd.holiday===true && !legalHolidays.has(mmddStr);
+}
+
+function computeStats(y,m,data,holidays) {
+  const {norms,tNorm,wdays}=getDayNorms(y,m,data,holidays);
+  const dim=new Date(y,m+1,0).getDate();
+  let tWork=0,tVacation=0,done=0;
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d),dw=dt.getDay()||7,k=dayKey(dt),dd=data[k]||{};
+    const mmddStr=mmdd(dt);
+    // Vacation day: counts as 8h toward worked, tracked separately
+    if(dw<6 && isVacation(dd,holidays,mmddStr)){
+      tVacation+=480; tWork+=480; done++;
+      continue;
+    }
+    if(!norms[k]) continue;
+    const norm=norms[k];
+    let worked=null;
+    if(dd.sosire&&dd.plecare){const s=toMins(dd.sosire),p=toMins(dd.plecare);if(p>s)worked=p-s;}
+    if(worked!==null){tWork+=worked;if(worked>=norm)done++;}
+  }
+  return {tNorm,tWork,tVacation,wdays,done};
+}
+
+
+// ── Compute weekly breakdown ─────────────────────────────────
+function computeWeeks(y,m,data,holidays,norms) {
+  const dim=new Date(y,m+1,0).getDate();
+  const weeks=[];
+  let curWeek=null;
+
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m,d), dw=dt.getDay()||7;
+    const k=dayKey(dt), dd=data[k]||{};
+    const mmddStr=mmdd(dt);
+    const isLegalHol=holidays.has(mmddStr);
+    const isVac=isVacation(dd,holidays,mmddStr);
+    const isHol=dd.holiday!==undefined?dd.holiday:isLegalHol;
+    const isWkend=dw>=6, isWk=!isWkend&&!isHol;
+    const norm=isWk?(norms[k]||0):0;
+    let worked=null;
+    if(isWk&&dd.sosire&&dd.plecare){const s=toMins(dd.sosire),p=toMins(dd.plecare);if(p>s)worked=p-s;}
+
+    // Monday starts new week
+    if(dw===1||d===1){
+      if(curWeek) weeks.push(curWeek);
+      let endD=d;
+      for(let x=d;x<=dim&&x<d+7;x++){
+        const xdw=new Date(y,m,x).getDay()||7;
+        if(xdw<=5) endD=x;
+        if(xdw===5) break;
+      }
+      curWeek={startD:d,endD,tNorm:0,tWork:0,tVacation:0};
+    }
+    if(curWeek){
+      if(isVac&&dw<6){curWeek.tNorm+=480;curWeek.tWork+=480;curWeek.tVacation+=480;}
+      else if(isWk){
+        curWeek.tNorm+=norm;
+        if(worked!==null) curWeek.tWork+=worked;
+      }
+    }
+  }
+  if(curWeek) weeks.push(curWeek);
+  return weeks;
+}
+
+// ── Render full page ────────────────────────────────────────
+function render(){
+  const data=load(Y,M), holidays=getHolidays(Y);
+  const dim=new Date(Y,M+1,0).getDate();
+
+  document.getElementById('hdrMonth').textContent=MONTHS[M];
+  document.getElementById('hdrYear').textContent=Y;
+  document.getElementById('navLabel').textContent=MONTHS[M]+' '+Y;
+
+  renderSummary(data,holidays);
+
+  const list=document.getElementById('daysList');
+  list.innerHTML='';
+  const {norms,lastFriKey}=getDayNorms(Y,M,data,holidays);
+  const weeks=computeWeeks(Y,M,data,holidays,norms);
+  let weekIdx=0;
+
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(Y,M,d), dw=dt.getDay()||7;
+    const k=dayKey(dt), dd=data[k]||{};
+    const isHol = dd.holiday!==undefined ? dd.holiday : holidays.has(mmdd(dt));
+    const isWkend = dw>=6;
+    const isWk   = !isWkend && !isHol;
+    const norm    = isWk?(norms[k]||0):0;
+
+    // Insert week header when we reach the start of a new week
+    if(weekIdx<weeks.length && d===weeks[weekIdx].startD){
+      const w=weeks[weekIdx];
+      const rem=w.tNorm-w.tWork;
+      const pct=w.tNorm>0?Math.min(100,Math.round(w.tWork/w.tNorm*100)):0;
+      const startFmt=w.startD+' '+MONTHS[M].slice(0,3);
+      const endFmt  =w.endD+' '+MONTHS[M].slice(0,3);
+      const wh=document.createElement('div');
+      wh.className='week-header';
+      wh.innerHTML=`
+        <div class="week-header-title">
+          <span class="week-label-txt">Săptămâna</span>
+          <span class="week-range-txt">${startFmt} – ${endFmt}</span>
+        </div>
+        <div class="wk-val">
+          <span>Prestate</span>
+          <span class="accent">${hm(w.tWork)}</span>
+        </div>
+        <div class="wk-val">
+          <span>De prestat</span>
+          <span class="blue">${hm(w.tNorm)}</span>
+        </div>
+        <div class="wk-val">
+          <span>Rămase</span>
+          <span class="${rem<=0?'green':'red'}">${rem<0?'+':''}${hm(Math.abs(rem))}</span>
+        </div>
+        ${w.tVacation>0?`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 2px 0;border-top:1px solid var(--border);grid-column:1/-1"><span style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Concediu</span><span style="font-family:var(--disp);font-size:13px;font-weight:700;color:var(--purple)">${hm(w.tVacation)}</span></div>`:''}
+        <div class="wk-prog-wrap">
+          <div class="wk-prog-bg"><div class="wk-prog-fill${pct>=100?' done':''}" style="width:${pct}%"></div></div>
+        </div>
+      `;
+      list.appendChild(wh);
+      weekIdx++;
+    }
+
+    list.appendChild(buildRow(d,dw,k,dd,isWkend,isHol,isWk,norm,k===lastFriKey));
+  }
+  attachEvents();
+}
+
+function renderSummary(data,holidays){
+  const {tNorm,tWork,tVacation,wdays,done}=computeStats(Y,M,data,holidays);
+  const rem=tNorm-tWork, pct=tNorm>0?Math.min(100,Math.round(tWork/tNorm*100)):0;
+  const vacRow=tVacation>0?`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 2px 6px;border-top:1px solid var(--border);margin-top:2px"><span style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)">Din care concediu</span><span style="font-family:var(--disp);font-size:14px;font-weight:700;color:var(--purple)">${hm(tVacation)} <span style="font-size:10px;color:var(--muted)">(${tVacation/480} ${tVacation/480===1?'zi':'zile'})</span></span></div>`:'';
+  document.getElementById('summaryCard').innerHTML=`
+    <div class="summary-grid">
+      <div><span class="sval-label">Ore prestate</span><span class="sval-num accent">${hm(tWork)}</span></div>
+      <div><span class="sval-label">Normă lunară</span><span class="sval-num blue">${hm(tNorm)}</span></div>
+      <div><span class="sval-label">Rămase</span><span class="sval-num ${rem<=0?'green':'red'}">${rem<0?'+':''}${hm(Math.abs(rem))}</span></div>
+    </div>
+    ${vacRow}
+    <div class="prog-bg"><div class="prog-fill ${pct>=100?'done':''}" style="width:${pct}%"></div></div>
+    <div class="prog-labels"><span>${pct}% completat</span><span>${done}/${wdays} zile complete</span></div>
+  `;
+}
+
+function buildRow(d,dw,k,dd,isWkend,isHol,isWk,norm,isLastFri){
+  norm=norm||0;
+  let worked=null;
+  if(isWk&&dd.sosire&&dd.plecare){const s=toMins(dd.sosire),p=toMins(dd.plecare);if(p>s)worked=p-s;}
+  const pctD=norm>0&&worked!==null?Math.min(100,Math.round(worked/norm*100)):0;
+
+  let statusTxt='';
+  if(isWkend) statusTxt=dw===6?'Sâmbătă':'Duminică';
+  else if(isHol) statusTxt=dd.holidayName||'Sărbătoare legală';
+  else if(worked!==null){const diff=worked-norm;statusTxt=(diff>=0?'+':'')+hm(diff)+' față de normă';}
+  else statusTxt='Normă: '+hm(norm);
+
+  const workedTxt = !isWk?'': worked!==null?hm(worked):'—';
+  const workedCls = worked!==null&&worked>=norm?'done': worked===null?'muted':'';
+
+  const rowCls=`day-row${isWkend?' weekend':isHol?' holiday':dd.sosire?' has-data':''}`;
+  const topCls=`day-top${isWkend?' weekend':isHol?' holiday-top':''}`;
+
+  const row=document.createElement('div');
+  row.className=rowCls; row.dataset.key=k;
+
+  // time selectors
+  const sosiH=dd.sosire?dd.sosire.split(':')[0]:'';
+  const sosiM=dd.sosire?dd.sosire.split(':')[1]:'';
+  const pleH =dd.plecare?dd.plecare.split(':')[0]:'';
+  const pleM =dd.plecare?dd.plecare.split(':')[1]:'';
+  const fmtV=(v,ph)=>v!==''?v:ph;
+  const spinHTML=(k,field,valH,valM)=>`
+    <div class="time-spin" data-key="${k}" data-field="${field}">
+      <div class="spin-unit">
+        <button class="spin-btn" data-dir="1" data-part="h" data-key="${k}" data-field="${field}">+</button>
+        <div class="spin-val${valH===''?' ph':''}" data-display="h">${valH!==''?valH:'hh'}</div>
+        <button class="spin-btn" data-dir="-1" data-part="h" data-key="${k}" data-field="${field}">−</button>
+      </div>
+      <span class="time-sep">:</span>
+      <div class="spin-unit">
+        <button class="spin-btn" data-dir="1" data-part="m" data-key="${k}" data-field="${field}">+</button>
+        <div class="spin-val${valM===''?' ph':''}" data-display="m">${valM!==''?valM:'mm'}</div>
+        <button class="spin-btn" data-dir="-1" data-part="m" data-key="${k}" data-field="${field}">−</button>
+      </div>
+    </div>`;
+
+  const isCustomHol=dd.holiday===true;
+  const canOpen=isWk||(!isWkend);
+
+  row.innerHTML=`
+    <div class="${topCls}" data-key="${k}">
+      <div class="day-date">
+        <span class="day-num">${d}</span>
+        <span class="day-dow${isWk?' wday':''}">${DOW_RO[dw]}</span>
+      </div>
+      <div class="day-mid">
+        <div class="day-status">${statusTxt}</div>
+        ${isWk?`<div class="day-prog-bg"><div class="day-prog-fill${pctD>=100?' done':''}" style="width:${pctD}%"></div></div>`:''}
+      </div>
+      <div class="day-right">
+        ${isWk?`<span class="day-worked ${workedCls}">${workedTxt}</span>`:''}
+        ${isWk&&worked===null?`<span class="day-norm-hint">${hm(norm)}</span>`:''}
+      </div>
+    </div>
+    <div class="day-inputs${(!isWk&&!isCustomHol)?' hidden':''}">
+      ${isWk?`
+      <div class="inp-group">
+        <span class="inp-label">Sosire</span>
+        ${spinHTML(k,"sosire",sosiH,sosiM)}
+      </div>
+      <div class="inp-group">
+        <span class="inp-label">Plecare</span>
+        ${spinHTML(k,"plecare",pleH,pleM)}
+      </div>
+      <div class="inp-actions">
+        <button class="btn-clear-day" data-key="${k}">✕ Șterge ziua</button>
+        <button class="btn-hol ${isCustomHol?'on':''}" data-key="${k}">${isCustomHol?'✓ Zi liberă':'+ Zi liberă'}</button>
+      </div>
+      `:`<div class="inp-group" style="grid-column:1/-1">
+        <div class="inp-actions" style="padding:0">
+          <span></span>
+          <button class="btn-hol ${isCustomHol?'on':''}" data-key="${k}">${isCustomHol?'✓ Zi liberă marcată':'+ Marchează zi liberă'}</button>
+        </div>
+      </div>`}
+    </div>
+  `;
+  return row;
+}
+
+function attachEvents(){
+  const list=document.getElementById('daysList');
+
+  // Spin buttons for time
+  list.querySelectorAll('.spin-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const {dir,part,key:k,field:fld}=btn.dataset;
+      const data=load(Y,M); if(!data[k])data[k]={};
+      const cur=data[k][fld]||'';
+      let h=cur?parseInt(cur.split(':')[0]):null;
+      let m=cur?parseInt(cur.split(':')[1]):null;
+      const d=parseInt(dir);
+      if(part==='h'){
+        h=h===null?8:((h+d+24)%24);
+        if(m===null) m=0;
+      } else {
+        m=m===null?0:((m+d+60)%60);
+        if(h===null) h=8;
+      }
+      data[k][fld]=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+      save(Y,M,data);
+      // Update display without full re-render
+      const spin=btn.closest('.time-spin');
+      spin.querySelector('[data-display="h"]').textContent=String(h).padStart(2,'0');
+      spin.querySelector('[data-display="h"]').classList.remove('ph');
+      spin.querySelector('[data-display="m"]').textContent=String(m).padStart(2,'0');
+      spin.querySelector('[data-display="m"]').classList.remove('ph');
+      // Update worked hours badge and summary
+      const row=btn.closest('.day-row');
+      const _h=getHolidays(Y);
+      const {norms:_norms}=getDayNorms(Y,M,data,_h);
+      patchRow(row,k,data[k]||{},_norms[k]||0);
+      renderSummary(data,_h);
+    });
+  });
+
+  // Clear day
+  list.querySelectorAll('.btn-clear-day').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const k=btn.dataset.key, data=load(Y,M);
+      if(data[k]){delete data[k].sosire;delete data[k].plecare;if(!Object.keys(data[k]).length)delete data[k];}
+      save(Y,M,data); openKey=null; render();
+    });
+  });
+
+  // Holiday toggle
+  list.querySelectorAll('.btn-hol').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const k=btn.dataset.key, data=load(Y,M);
+      if(!data[k])data[k]={};
+      if(data[k].holiday===true){delete data[k].holiday;}
+      else{data[k].holiday=true;delete data[k].sosire;delete data[k].plecare;}
+      if(!Object.keys(data[k]).length)delete data[k];
+      save(Y,M,data); render();
+    });
+  });
+}
+
+// Patch a row without full re-render
+function patchRow(row,k,dd,norm){
+  const dt=new Date(k), dw=dt.getDay()||7;
+  let worked=null;
+  if(dd.sosire&&dd.plecare){const s=toMins(dd.sosire),p=toMins(dd.plecare);if(p>s)worked=p-s;}
+  const pctD=norm>0&&worked!==null?Math.min(100,Math.round(worked/norm*100)):0;
+  const diff=worked!==null?worked-norm:null;
+
+  const wb=row.querySelector('.day-worked');
+  if(wb){wb.textContent=worked!==null?hm(worked):'—';wb.className='day-worked'+(worked!==null&&worked>=norm?' done':worked===null?' muted':'');}
+  const pf=row.querySelector('.day-prog-fill');
+  if(pf){pf.style.width=pctD+'%';pf.className='day-prog-fill'+(pctD>=100?' done':'');}
+  const nh=row.querySelector('.day-norm-hint');
+  if(nh)nh.style.display=worked===null?'':'none';
+  const st=row.querySelector('.day-status');
+  if(st&&!row.classList.contains('holiday')){
+    st.textContent=diff!==null?(diff>=0?'+':'')+hm(diff)+' față de normă':'Normă: '+hm(norm);
+  }
+  if(dd.sosire)row.classList.add('has-data');else row.classList.remove('has-data');
+}
+
+// ── Navigation ──────────────────────────────────────────────
+document.getElementById('prevMonth').addEventListener('click',()=>{M--;if(M<0){M=11;Y--;}openKey=null;render();});
+document.getElementById('nextMonth').addEventListener('click',()=>{M++;if(M>11){M=0;Y++;}openKey=null;render();});
+document.getElementById('btnReset').addEventListener('click',()=>{
+  if(confirm(`Ștergi toate datele pentru ${MONTHS[M]} ${Y}?`)){localStorage.removeItem(mKey(Y,M));openKey=null;render();}
+});
+
+// ── PWA ─────────────────────────────────────────────────────
+let dp=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;document.getElementById('install-banner').style.display='flex';});
+document.getElementById('btnInstall')?.addEventListener('click',async()=>{if(!dp)return;dp.prompt();await dp.userChoice;dp=null;document.getElementById('install-banner').style.display='none';});
+document.getElementById('btnDismiss')?.addEventListener('click',()=>{document.getElementById('install-banner').style.display='none';});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+render();
+</script>
+</body>
+</html>
