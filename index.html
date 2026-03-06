@@ -524,6 +524,29 @@ function buildRow(d,dw,k,dd,isWkend,isHol,isWk,norm,isLastFri){
   return row;
 }
 
+function updateWeekHeaders(data,holidays,norms){
+  const weeks=computeWeeks(Y,M,data,holidays,norms);
+  const headers=document.querySelectorAll('.week-header');
+  headers.forEach((wh,i)=>{
+    const w=weeks[i];
+    if(!w) return;
+    const rem=w.tNorm-w.tWork;
+    const pct=w.tNorm>0?Math.min(100,Math.round(w.tWork/w.tNorm*100)):0;
+    wh.querySelector('.accent').textContent=hm(w.tWork);
+    wh.querySelector('.blue').textContent=hm(w.tNorm);
+    const remEl=wh.querySelector('.wk-val:last-of-type span:last-child');
+    if(remEl){
+      remEl.textContent=(rem<0?'+':'')+hm(Math.abs(rem));
+      remEl.className=rem<=0?'green':'red';
+    }
+    const fill=wh.querySelector('.wk-prog-fill');
+    if(fill){
+      fill.style.width=pct+'%';
+      fill.className='wk-prog-fill'+(pct>=100?' done':'');
+    }
+  });
+}
+
 function attachEvents(){
   const list=document.getElementById('daysList');
 
@@ -552,11 +575,12 @@ function attachEvents(){
       spin.querySelector('[data-display="h"]').classList.remove('ph');
       spin.querySelector('[data-display="m"]').textContent=String(m).padStart(2,'0');
       spin.querySelector('[data-display="m"]').classList.remove('ph');
-      // Update worked hours badge and summary
+      // Update worked hours badge, week headers and monthly summary
       const row=btn.closest('.day-row');
       const _h=getHolidays(Y);
       const {norms:_norms}=getDayNorms(Y,M,data,_h);
       patchRow(row,k,data[k]||{},_norms[k]||0);
+      updateWeekHeaders(data,_h,_norms);
       renderSummary(data,_h);
     });
   });
